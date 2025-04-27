@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cashify Price Tracker</title>
+    <style>
+        body {
+            width: 400px;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .active {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .inactive {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+        button:hover {
+            background-color: #0e4a8f;
+            color: white;
+        }
+        #priceHistory {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .price-record {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .price-record:last-child {
+            border-bottom: none;
+        }
+        .timestamp {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .alert-section {
+            margin: 15px 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+        .alert-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 120px;
+        }
+        .current-alert {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+        }
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 8px;
+            background: white;
+            color: #1976d2;
+            border: solid 2px #1976d2;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .tab-button.active {
+            background: #1976d2;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .alert-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .alert-item:last-child {
+            border-bottom: none;
+        }
+        .alert-details {
+            flex: 1;
+        }
+        .alert-details a {
+            color: #1976d2;
+            text-decoration: none;
+        }
+        .alert-details a:hover {
+            text-decoration: underline;
+        }
+        .alert-actions {
+            display: flex;
+            gap: 5px;
+        }
+        .remove-alert {
+            background: #dc3545;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        .test-button {
+            margin-top: 10px;
+            background-color: #6c757d;
+            width: 100%;
+        }
+        .test-button:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <h2>Cashify Price Tracker</h2>
+    <div id="status" class="status"></div>
+    <button id="checkNow">Check Now</button>
+    
+    <div class="tab-buttons">
+        <button class="tab-button active" data-tab="current">Current Page</button>
+        <button class="tab-button" data-tab="alerts">All Alerts</button>
+    </div>
+
+    <div id="currentTab" class="tab-content active">
+        <div class="alert-section">
+            <h3>Price Alert</h3>
+            <div class="alert-input">
+                <input type="number" id="alertPrice" placeholder="Enter price">
+                <button id="setAlert">Set Alert</button>
+            </div>
+            <div id="currentAlert" class="current-alert"></div>
+            <button id="testAlert" class="test-button">Test Alert</button>
+        </div>
+
+        <h3>Recent Price History</h3>
+        <div id="priceHistory"></div>
+    </div>
+
+    <div id="alertsTab" class="tab-content">
+        <h3>Active Price Alerts</h3>
+        <div id="allAlerts"></div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html> 
