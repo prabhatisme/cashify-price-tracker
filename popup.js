@@ -8,6 +8,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const allAlertsDiv = document.getElementById('allAlerts');
     const testAlertButton = document.getElementById('testAlert');
 
+    // Add loading states
+    function setLoading(element, isLoading) {
+        if (isLoading) {
+            element.innerHTML = '<div class="loading">Loading...</div>';
+        }
+    }
+
     // Tab handling
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -26,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Load alerts if switching to alerts tab
             if (tabName === 'alerts') {
+                setLoading(allAlertsDiv, true);
                 loadAllAlerts();
             }
         });
@@ -38,10 +46,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (isCashifyPage) {
         statusDiv.textContent = 'Active on this page';
         statusDiv.className = 'status active';
-        // Fetch price history
-        fetchPriceHistory(tab.url);
-        // Load saved alert price
-        loadAlertPrice(tab.url);
+        
+        // Load data in parallel
+        setLoading(priceHistoryDiv, true);
+        setLoading(currentAlertDiv, true);
+        
+        Promise.all([
+            fetchPriceHistory(tab.url),
+            loadAlertPrice(tab.url)
+        ]).catch(error => {
+            console.error('Error loading initial data:', error);
+        });
     } else {
         statusDiv.textContent = 'Not a Cashify page';
         statusDiv.className = 'status inactive';
@@ -154,9 +169,63 @@ async function ensureContentScriptInjected(tabId) {
     }
 }
 
+// Add cache management functions
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+async function getCachedData(key) {
+    try {
+        const data = await chrome.storage.local.get(key);
+        if (data[key]) {
+            const { value, timestamp } = data[key];
+            if (Date.now() - timestamp < CACHE_DURATION) {
+                return value;
+            }
+        }
+        return null;
+    } catch (error) {
+        console.error('Error getting cached data:', error);
+        return null;
+    }
+}
+
+async function setCachedData(key, value) {
+    try {
+        await chrome.storage.local.set({
+            [key]: {
+                value,
+                timestamp: Date.now()
+            }
+        });
+    } catch (error) {
+        console.error('Error setting cached data:', error);
+    }
+}
+
+// Register service worker and request periodic sync
+async function registerServiceWorker() {
+    try {
+        const registration = await navigator.serviceWorker.register('service-worker.js');
+        if ('periodicSync' in registration) {
+            try {
+                await registration.periodicSync.register('sync-data', {
+                    minInterval: 5 * 60 * 1000 // 5 minutes
+                });
+            } catch (error) {
+                console.error('Periodic sync registration failed:', error);
+            }
+        }
+    } catch (error) {
+        console.error('Service worker registration failed:', error);
+    }
+}
+
+// Initialize service worker
+registerServiceWorker();
+
+// Update data fetching functions to use service worker
 async function loadAllAlerts() {
     try {
-        const response = await fetch('http://localhost:3000/api/alerts');
+        const response = await fetch('https://cashify-price-tracker.onrender.com/api/alerts');
         if (!response.ok) {
             throw new Error('Failed to fetch alerts');
         }
@@ -195,32 +264,55 @@ function displayAllAlerts(alerts) {
 
 async function removeAlert(url) {
     try {
-        const response = await fetch('http://localhost:3000/api/alerts', {
-            method: 'POST',
+        // Show loading state
+        const allAlertsDiv = document.getElementById('allAlerts');
+        allAlertsDiv.innerHTML = '<div class="loading">Removing alert...</div>';
+
+        // Send remove request to server
+        const response = await fetch('https://cashify-price-tracker.onrender.com/api/alerts', {
+            method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                url,
-                remove: true
-            })
+            body: JSON.stringify({ url })
         });
 
         if (!response.ok) {
             throw new Error('Failed to remove alert');
         }
 
+        // Clear local storage
+        await chrome.storage.local.remove(url);
+
+        // Clear service worker cache
+        if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.ready;
+            const cache = await caches.open('cashify-price-tracker-v1');
+            await cache.delete(`alertPrice_${url}`);
+        }
+
         // Refresh alerts list
-        loadAllAlerts();
+        await loadAllAlerts();
+
+        // If we're on the current page tab and the URL matches, clear the current alert
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab.url === url) {
+            updateCurrentAlert(null);
+            document.getElementById('alertPrice').value = '';
+        }
     } catch (error) {
         console.error('Error removing alert:', error);
+        document.getElementById('allAlerts').innerHTML = 
+            '<p>Error removing alert. Please try again.</p>';
     }
 }
 
+// Make removeAlert function available globally
+window.removeAlert = removeAlert;
+
 async function loadAlertPrice(url) {
     try {
-        // Try to get alert from server first
-        const response = await fetch(`http://localhost:3000/api/alerts/url?url=${encodeURIComponent(url)}`);
+        const response = await fetch(`https://cashify-price-tracker.onrender.com/api/alerts/url?url=${encodeURIComponent(url)}`);
         if (response.ok) {
             const alert = await response.json();
             if (alert) {
@@ -325,7 +417,7 @@ async function saveAlertPrice(url, alertPrice) {
         console.log('Sending data to server:', serverData);
 
         // Save to server
-        const serverResponse = await fetch('http://localhost:3000/api/alerts', {
+        const serverResponse = await fetch('https://cashify-price-tracker.onrender.com/api/alerts', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -368,7 +460,7 @@ function updateCurrentAlert(alertPrice) {
 
 async function fetchPriceHistory(url) {
     try {
-        const response = await fetch(`http://localhost:3000/api/prices?url=${encodeURIComponent(url)}`);
+        const response = await fetch(`https://cashify-price-tracker.onrender.com/api/prices?url=${encodeURIComponent(url)}`);
         if (!response.ok) {
             throw new Error('Failed to fetch price history');
         }

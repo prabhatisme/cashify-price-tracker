@@ -8,7 +8,9 @@
     "storage",
     "alarms",
     "tabs",
-    "scripting"
+    "scripting",
+    "background",
+    "periodicBackgroundSync"
   ],
   "icons": {
     "48": "icon48.png",
@@ -19,7 +21,7 @@
     "http://localhost:3000/*"
   ],
   "background": {
-    "service_worker": "background.js",
+    "service_worker": "service-worker.js",
     "type": "module"
   },
   "content_scripts": [{
