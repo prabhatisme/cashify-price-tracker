@@ -245,8 +245,8 @@ function displayAllAlerts(alerts) {
         return;
     }
 
-    const alertsHtml = alerts.map(alert => `
-        <div class="alert-item">
+    allAlertsDiv.innerHTML = alerts.map((alert, idx) => `
+        <div class="alert-item" data-url="${alert.url}">
             <div class="alert-details">
                 <div><strong><a href="${alert.url}" target="_blank" rel="noopener noreferrer">${alert.productName}</a></strong></div>
                 <div>Current: &#8377;${alert.currentPrice} | Target: &#8377;${alert.targetPrice}</div>
@@ -254,12 +254,18 @@ function displayAllAlerts(alerts) {
                 <div class="timestamp">Last checked: ${new Date(alert.lastChecked).toLocaleString()}</div>
             </div>
             <div class="alert-actions">
-                <button class="remove-alert" onclick="removeAlert('${alert.url}')">Remove</button>
+                <button class="remove-alert" data-url="${alert.url}">Remove</button>
             </div>
         </div>
     `).join('');
 
-    allAlertsDiv.innerHTML = alertsHtml;
+    // Add event listeners for remove buttons
+    allAlertsDiv.querySelectorAll('.remove-alert').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const url = btn.getAttribute('data-url');
+            removeAlert(url);
+        });
+    });
 }
 
 async function removeAlert(url) {

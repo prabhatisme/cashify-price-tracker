@@ -75,16 +75,8 @@ async function syncData() {
 
 // Service Worker event listeners
 self.addEventListener('install', (event) => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll([
-                '/',
-                '/popup.html',
-                '/popup.js',
-                '/content.js'
-            ]);
-        })
-    );
+    // No need to pre-cache extension files
+    event.waitUntil(Promise.resolve());
 });
 
 self.addEventListener('activate', (event) => {
@@ -135,12 +127,5 @@ self.addEventListener('fetch', (event) => {
                 }
             })()
         );
-    }
-});
-
-// Set up periodic background sync
-self.addEventListener('periodicsync', (event) => {
-    if (event.tag === 'sync-data') {
-        event.waitUntil(syncData());
     }
 }); 
